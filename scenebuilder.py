@@ -42,22 +42,29 @@ if 'current_step' not in st.session_state:
 # 1. THE ENGINE: KEY ROTATION & API CALLS
 # ==============================================================================
 
+# --- REPLACEMENT FUNCTION FOR GEMINI 2.5 FLASH & PREVIEW ---
 def call_gemini_api(payload, model="gemini-2.5-flash-preview-09-2025", is_image_gen=False):
-    """Wrapper that handles Key Rotation automatically."""
+    """
+    Forces the use of Gemini 2.5 Flash Preview and Nano Banana (Flash Image).
+    """
     keys = st.secrets["api_keys"]["keys"]
     
-    # Determine Endpoint
+    # 1. CONSTRUCT THE EXACT URL FOR 2.5
     if is_image_gen:
-        if "imagen" in model.lower():
-            base_url = f"https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict"
+        # User requested "Nano Banana" (Flash Image Preview)
+        if "nano" in model.lower() or "flash" in model.lower():
+            base_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent"
+        # Fallback to Imagen if requested
         else:
-            base_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent"
+            base_url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict"
     else:
-        base_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        # Standard Text Generation (Script breakdown)
+        # Using the specific 09-2025 snapshot you wanted
+        base_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
 
     last_error = None
 
-    # RETRY LOOP (Key Rotation)
+    # 2. KEY ROTATION LOOP
     for i in range(len(keys)):
         current_key = keys[i]
         url = f"{base_url}?key={current_key}"
@@ -66,23 +73,29 @@ def call_gemini_api(payload, model="gemini-2.5-flash-preview-09-2025", is_image_
         try:
             response = requests.post(url, headers=headers, json=payload)
             
+            # SUCCESS
             if response.status_code == 200:
                 return response.json()
             
-            elif response.status_code in [429, 503]:
-                st.toast(f"⚠️ Key {i+1} exhausted. Switching to Key {i+2}...", icon="🔄")
+            # REAL EXHAUSTION (Rate Limit)
+            elif response.status_code == 429:
+                st.toast(f"⚠️ Key {i+1} Rate Limited. Switching...", icon="mj")
                 continue
-                
+            
+            # MODEL NOT FOUND / BAD REQUEST (The "Fake Exhaustion")
             else:
-                error_msg = response.text
-                st.error(f"API Error {response.status_code}: {error_msg}")
-                return None
+                error_text = response.text
+                # If it's a 404 or 400, switching keys won't help, but we try anyway just in case
+                print(f"Key {i+1} Error: {response.status_code} - {error_text}")
+                st.error(f"❌ API Error {response.status_code}: {error_text}")
+                last_error = f"{response.status_code} - {error_text}"
+                continue
 
         except Exception as e:
-            last_error = e
+            last_error = str(e)
             continue
     
-    st.error(f"ALL API KEYS FAILED. Last error: {last_error}")
+    st.error(f"💀 ALL KEYS FAILED. Last error: {last_error}")
     return None
 
 # ==============================================================================
@@ -299,3 +312,4 @@ if st.session_state.current_step == 'style': screen_style()
 elif st.session_state.current_step == 'script': screen_script()
 elif st.session_state.current_step == 'characters': screen_characters()
 elif st.session_state.current_step == 'storyboard': screen_storyboard()
+
