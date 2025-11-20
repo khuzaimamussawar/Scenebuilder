@@ -41,7 +41,10 @@ if 'current_step' not in st.session_state:
 # ==============================================================================
 # 1. THE ENGINE: KEY ROTATION & API CALLS
 # ==============================================================================
-
+def call_gemini_api(payload, model="gemini-2.5-flash-preview-09-2025", is_image_gen=False):
+    keys = st.secrets["api_keys"]["keys"]
+    st.write(f"DEBUG: Found {len(keys)} keys.")
+    
 # --- REPLACEMENT FUNCTION FOR GEMINI 2.5 FLASH & PREVIEW ---
 def call_gemini_api(payload, model="gemini-2.5-flash-preview-09-2025", is_image_gen=False):
     """
@@ -312,4 +315,5 @@ if st.session_state.current_step == 'style': screen_style()
 elif st.session_state.current_step == 'script': screen_script()
 elif st.session_state.current_step == 'characters': screen_characters()
 elif st.session_state.current_step == 'storyboard': screen_storyboard()
+
 
