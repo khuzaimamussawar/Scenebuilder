@@ -278,7 +278,7 @@ def call_gemini(payload, model_type="text"):
     elif model_type == "imagen":
         url = "[https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict](https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict)"
     else:
-        # ✅ FIXED TEXT MODEL: Force the universally stable 1.5 Flash if 2.5 fails
+        # Text Logic (Script/JSON Breakdown)
         url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
 
     for i, key in enumerate(keys):
@@ -289,7 +289,6 @@ def call_gemini(payload, model_type="text"):
                 st.toast(f"Key {i+1} Exhausted. Switching...", icon="⚠️")
                 continue
             
-            # Check for Geo-Block (400/404) on text models and fallback logic removed
             st.error(f"API Error {res.status_code}: {res.text}")
         except: continue
     return None
@@ -367,6 +366,12 @@ elif st.session_state.step == 2:
     
     if st.button("Generate Scenes 🚀", type="primary"):
         with st.spinner("Breaking down script..."):
+            
+            # --- DEBUGGING LINE ---
+            print(f"--- DEBUG: Script content received ---")
+            print(f"Script Length: {len(st.session_state.script_text)}")
+            print(f"Style Prompt: {st.session_state.style_prompt}")
+            
             # Explicit Override Logic
             inst = f"\nOVERRIDE INSTRUCTIONS: {st.session_state.script_instructions}" if st.session_state.script_instructions else ""
             
@@ -491,7 +496,7 @@ elif st.session_state.step == 4:
             
             # CONTINUITY PROMPT (Fixed for strong style adherence)
             prompt_text = (
-                f"STRICTLY USE PROVIDED STYLE REFERENCE IMAGES AND STYLE PROMPT AS THE PRIMARY VISUAL GUIDE. "
+                f"Use the provided STYLE_REFERENCE_IMAGES and STYLE PROMPT as the primary visual guide. "
                 f"Style: {st.session_state.style_prompt}. "
                 f"Aspect Ratio: 16:9. Characters: {char_ctx}. "
                 f"Action: {scene_data['prompt']}. "
@@ -550,7 +555,7 @@ elif st.session_state.step == 4:
             c_r_head, c_r_link = st.columns([1, 1])
             c_r_head.markdown("<small style='color:#94a3b8; font-weight:bold'>SCENE REF</small>", unsafe_allow_html=True)
             
-            # UPLOAD REF 
+            # UPLOAD REF (FIXED DUPLICATION)
             scene_up = st.file_uploader("Upload", type=['png', 'jpg'], key=f"ref_{curr}", label_visibility="collapsed")
             if scene_up:
                 b64 = base64.b64encode(scene_up.getvalue()).decode('utf-8')
@@ -589,7 +594,6 @@ elif st.session_state.step == 4:
                     st.session_state.storyboard[curr]['prompt'] = clean_json_response(res['candidates'][0]['content']['parts'][0]['text'])
                     st.rerun()
         
-        # This is the previously non-editable area, now editable:
         st.session_state.storyboard[curr]['script'] = st.text_area("Script Text", st.session_state.storyboard[curr]['script'], label_visibility="collapsed")
 
         # BOTTOM NAV
@@ -615,7 +619,6 @@ elif st.session_state.step == 4:
             st.session_state.curr_scene += 1
             st.rerun()
 
-        # GENERATE REMAINING FIX
         if b5.button("Gen Remaining", key="gen_all"):
             prog = st.progress(0)
             status = st.empty()
@@ -626,7 +629,7 @@ elif st.session_state.step == 4:
                     status.text(f"Generating scene {i+1} of {total_scenes_to_process}...")
                     generate_scene_logic(i, model_mode)
                     time.sleep(0.5)
-                prog.progress((i+1) / total_scenes_to_process)
+                prog.progress((i+1)/total_scenes_to_process)
             st.success("Done!")
             st.rerun()
             
