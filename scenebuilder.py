@@ -19,7 +19,12 @@ st.set_page_config(page_title="AI Storyboarder Pro", layout="wide", page_icon="ð
 API_KEY = "" 
 
 if not API_KEY and "api_keys" in st.secrets:
-    API_KEY = st.secrets["api_keys"]["keys"][0]
+    # Tries to find the key in secrets.toml if not hardcoded
+    # Ensure your secrets.toml looks like: [api_keys] keys = ["YOUR_KEY"]
+    try:
+        API_KEY = st.secrets["api_keys"]["keys"][0]
+    except:
+        pass
 
 # --- CSS STYLING (Dark/Cinematic) ---
 st.markdown("""
@@ -105,9 +110,14 @@ def call_gemini_generic(payload, model="flash-preview"):
 def clean_json_text(text):
     """Extract JSON from potential markdown blocks"""
     text = text.strip()
-    if text.startswith("
-    if text.endswith("
-return text.strip()
+    # FIX: Properly checking for markdown code blocks
+    if text.startswith("```json"):
+        text = text[7:]
+    elif text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    return text.strip()
 
 def handle_file_upload(files):
     """Convert uploaded files to base64 list"""
